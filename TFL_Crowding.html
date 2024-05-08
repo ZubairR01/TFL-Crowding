@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+    <title>Crowding</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        font-family: inherit;
+        box-sizing: border-box;
+      }
+      /* Setting the font and font color for the page */
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        line-height: 1.5;
+        color: #333333;
+        padding-bottom: 15px;
+      }
+      /* Setting width of the webpage */
+      .container {
+        max-width: 992px;
+        width: min(100% - 25px);
+        margin: 0 auto;
+      }
+      /* setting color codes and font size for the heading */
+      h1 {
+        font-size: 32px;
+        font-weight: bold;
+        text-align: center;
+        text-transform: capitalize;
+        margin-top: 15px;
+        margin-bottom: 15px;
+        color: #5f9ea0;
+        border: 5px double #333333;
+      }
+      /* setting color codes and font size for the selectoins */
+      .fields {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px 50px;
+        flex-wrap: wrap;
+        margin-top: 25px;
+      }
+
+      .field-group {
+        flex: 1 1 47%;
+      }
+
+      .field-group label {
+        font-weight: 600;
+        display: block;
+        margin-bottom: 5px;
+        color: #5f9ea0;
+      }
+
+      .field-group select {
+        width: 100%;
+        padding: 10px 2.5px;
+        border: 1px solid #cccccc;
+        border-radius: 5px;
+        font-size: 16px;
+        color: inherit;
+      }
+      /* button styling */
+      button {
+        display: block;
+        width: 100%;
+        padding: 14px 2.5px;
+        background-color: #f2f2f2;
+        color: #5f9ea0;
+        border: 2px solid #5f9ea0;
+        font-size: 16px;
+        margin-top: 25px;
+        border-radius: 5px;
+
+        cursor: pointer;
+      }
+      /* chart width styling */
+      .chart-container {
+        width: min(100% - 25px);
+        margin: 0 auto;
+        margin: 50px 0;
+      }
+
+      span {
+        display: block;
+        text-align: center;
+        color: #5f9ea0;
+      }
+      /* table styling */
+      table {
+        font-family: Arial, Helvetica, sans-serif;
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      table td,
+      table th {
+        border: 1px solid #cccccc;
+        padding: 8px;
+        text-align: center;
+      }
+
+      table tr:nth-child(even) {
+        background-color: #f2f2f2;
+      }
+
+      table th {
+        padding-top: 10px;
+        font-size: 18px;
+        padding-bottom: 10px;
+        background-color: #5f9ea0;
+        color: #ffffff;
+        border: 5px solid rgba(95, 158, 160, 0.8);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- This code displays the heading at the top -->
+      <h1>View crowding info at tube stations</h1>
+      <!-- This is the paragrapgh text below the heading -->
+      <p>
+        Welcome to the website. Here you can view the crowding at tube stations
+        in London. You can also view the crowding at a specific station. To view
+        the crowding at a specific station, select the station name and
+        corresponding day of the week below and click the show results button.
+      </p>
+      <!-- This is the option for the user to select the station and day of the week -->
+      <div class="fields">
+        <!-- Tube Station -->
+        <div class="field-group">
+          <label for="station">Please Select Tube Station</label>
+          <select name="station" id="station">
+            <option value="940GZZLUPAC">Paddington</option>
+            <option value="940GZZLUKSX">King’s Cross St Pancras</option>
+            <option value="940GZZLUEUS">Euston</option>
+            <option value="940GZZLUWLO">Waterloo</option>
+            <option value="940GZZLULNB">London Bridge</option>
+            <option value="940GZZLULVT">Liverpool Street</option>
+          </select>
+        </div>
+        <!-- Day of the week -->
+        <div class="field-group">
+          <label for="day">Please Select Day</label>
+          <select name="day" id="day">
+            <option value="mon">Monday</option>
+            <option value="tue">Tuesday</option>
+            <option value="wed">Wednesday</option>
+            <option value="thu">Thursday</option>
+            <option value="fri">Friday</option>
+            <option value="sat">Saturday</option>
+            <option value="sun">Sunday</option>
+          </select>
+        </div>
+      </div>
+      <!-- This is the button for the user to click to view the results -->
+      <button id="show">Show Results</button>
+    </div>
+    <!-- This is the chart container -->
+    <div class="chart-container">
+      <canvas id="myChart"></canvas>
+    </div>
+    <!-- This is the area to display AM and PM peak times from API -->
+    <div class="container">
+      <span id="amPeak"></span>
+      <span id="pmPeak"></span>
+      <!-- Here we will render the data in the table coming from the API -->
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Crowding</th>
+          </tr>
+        </thead>
+        <tbody id="peakLevels"></tbody>
+      </table>
+    </div>
+  </body>
+  <script>
+    // Get the button and chart elements from HTML
+    const show = document.getElementById("show");
+    const chart = document.getElementById("myChart");
+    // On button click using eventlistener, the naptan ID and day of the week are extracted from the HTML select elements
+    show.addEventListener("click", function () {
+      // extracts the tube station and naptan ID
+      const naptan = document.getElementById("station").value;
+      const day = document.getElementById("day").value;
+
+      // Here we construct the URL for the API call and append the naptan ID and day of the week extracted from the HTML select elements above
+      const url = `https://api.tfl.gov.uk/crowding/${naptan}/${day}`;
+      // This the API key that was retrieved from the TFL website by signing up
+      var app_key = "0b6fbd418ca14373bb6513a718d18732";
+
+      // destroy the chart if it already exists. This is mainly for when the user clicks the button again to view a different station so we make sure the existed chart is destroyed
+      if (Chart.getChart(chart)) {
+        Chart.getChart(chart).destroy();
+      }
+      // make the ajax call to the API
+      $.ajax({
+        url: url,
+        type: "GET",
+        // As directed, we need to pass the API key in the header
+        headers: {
+          app_id: app_key,
+          app_key: app_key,
+        },
+        // if the call is successful, we get the data and handle into this function
+        success: function (data) {
+          // stsoring the 2 important parts of the data in 2 arrays. lables array will store the time and crowding array will store the crowding level on that time
+          var labels = data.timeBands.map((item) => item.timeBand);
+          var crowding = data.timeBands.map(
+            (item) => item.percentageOfBaseLine * 100
+          );
+
+          // Here we construct the chart, using chart.js showing the capacity levels as percentages (i.e., multiply by 100) in 15-minute increments throughout the selected day of the week.
+          const ctx = document.getElementById("myChart").getContext("2d");
+          const myChart = new Chart(ctx, {
+            // type of chart set to "bar"
+            type: "bar",
+            // in the data object, we pass the labels and crowding arrays we created above
+            data: {
+              // labels will be mapped to the x-axis
+              labels: labels,
+              datasets: [
+                {
+                  // the crowding data will be mapped to the y-axis
+                  label: "Crowding %",
+                  data: crowding,
+                  // the background color of the bars
+                  backgroundColor: "rgba(95, 158, 160, 0.2)",
+                  borderColor: "rgba(95, 158, 160, 1)",
+                  borderWidth: 1,
+                },
+              ],
+            },
+            options: {
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  min: 0,
+                  max: 100,
+                },
+              },
+            },
+          });
+
+          // displays the AM and PM peak time frame, as returned by the API.
+          const amPeak = document.getElementById("amPeak");
+          const pmPeak = document.getElementById("pmPeak");
+
+          amPeak.innerHTML = `AM Peak: ${data.amPeakTimeBand}`;
+          pmPeak.innerHTML = `PM Peak: ${data.pmPeakTimeBand}`;
+
+          // displays the capacity levels as percentages in 15-minute increments throughout the selected day of the week
+          const peakLevels = document.getElementById("peakLevels");
+          // making sure the table is empty before we render the data
+          peakLevels.innerHTML = "";
+          // looping through the data and rendering it in the table
+          data.timeBands.forEach((timeBand) => {
+            // creating a new row
+            const row = document.createElement("tr");
+            // creating 2 new cells for the time and crowding level
+            const timeBandCell = document.createElement("td");
+            const percentageOfBaseLineCell = document.createElement("td");
+            // setting the text of the cells to the time and crowding level
+            timeBandCell.innerHTML = timeBand.timeBand;
+            percentageOfBaseLineCell.innerHTML =
+              (timeBand.percentageOfBaseLine * 100).toFixed(2) + "%";
+            // appending the cells to the row
+            row.appendChild(timeBandCell);
+            row.appendChild(percentageOfBaseLineCell);
+            // appending the row to the table
+            peakLevels.appendChild(row);
+          });
+        },
+      });
+    });
+  </script>
+</html>
